@@ -77,14 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "FlowSync — Multi-Entity Business Intelligence" },
+      { name: "description", content: "Unified financial intelligence for entrepreneurs running the same business across multiple countries. Connect every Xero organisation, aggregate in your home currency, and get alerts before problems surface." },
+      { name: "author", content: "FlowSync" },
+      { property: "og:title", content: "FlowSync — Multi-Entity Business Intelligence" },
+      { property: "og:description", content: "Connect every Xero organisation into one place. Consolidated reporting, live FX conversion, and cross-branch alerts for multi-country entrepreneurs." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
