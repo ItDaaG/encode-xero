@@ -27,7 +27,8 @@ const XERO_SCOPES = [
   "openid",
   "profile",
   "email",
-  "accounting.invoices"
+  "accounting.invoices",
+  "offline_access"
 ].join(" ");
 
 function buildXeroAuthorizeUrl() {
