@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthConnectRouteImport } from './routes/auth_.connect'
 import { Route as AuthCallbackRouteImport } from './routes/auth_.callback'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -29,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthConnectRoute = AuthConnectRouteImport.update({
+  id: '/auth_/connect',
+  path: '/auth/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth_/callback',
   path: '/auth/callback',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/connect': typeof AuthConnectRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/connect': typeof AuthConnectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/auth_/callback': typeof AuthCallbackRoute
+  '/auth_/connect': typeof AuthConnectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/auth/callback'
+  fullPaths: '/' | '/auth' | '/dashboard' | '/auth/callback' | '/auth/connect'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/auth/callback'
-  id: '__root__' | '/' | '/auth' | '/dashboard' | '/auth_/callback'
+  to: '/' | '/auth' | '/dashboard' | '/auth/callback' | '/auth/connect'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/auth_/callback'
+    | '/auth_/connect'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +82,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  AuthConnectRoute: typeof AuthConnectRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth_/connect': {
+      id: '/auth_/connect'
+      path: '/auth/connect'
+      fullPath: '/auth/connect'
+      preLoaderRoute: typeof AuthConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth_/callback': {
       id: '/auth_/callback'
       path: '/auth/callback'
@@ -107,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  AuthConnectRoute: AuthConnectRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

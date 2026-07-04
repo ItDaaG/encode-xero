@@ -15,32 +15,24 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-// Set these in your env (e.g. .env / .env.local)
-// VITE_XERO_CLIENT_ID=xxxxxxxx
-// VITE_XERO_REDIRECT_URI=https://yourapp.com/auth/callback
 const XERO_CLIENT_ID = import.meta.env.VITE_XERO_CLIENT_ID as string;
 const XERO_REDIRECT_URI = import.meta.env.VITE_XERO_REDIRECT_URI as string;
 
-// Adjust scopes to whatever your app actually needs.
-// offline_access is required to get a refresh token back.
-const XERO_SCOPES = [
-  "openid",
-  "profile",
-  "email",
-  "accounting.invoices",
-  "offline_access"
-].join(" ");
+// IDENTITY ONLY. No "accounting.*" scope here — that's what triggers Xero's
+// tenant-consent screen, and we don't want that on every login, only when the
+// user deliberately connects an organisation (see auth.connect.tsx).
+const LOGIN_SCOPES = ["openid", "profile", "email", "offline_access"].join(" ");
 
 function buildXeroAuthorizeUrl() {
-  // Basic CSRF protection: generate a state value and verify it in the callback.
   const state = crypto.randomUUID();
   sessionStorage.setItem("xero_oauth_state", state);
+  sessionStorage.setItem("xero_oauth_mode", "login");
 
   const params = new URLSearchParams({
     response_type: "code",
     client_id: XERO_CLIENT_ID,
     redirect_uri: XERO_REDIRECT_URI,
-    scope: XERO_SCOPES,
+    scope: LOGIN_SCOPES,
     state,
   });
 
@@ -92,7 +84,8 @@ function AuthPage() {
           </button>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            You'll be redirected to Xero to authorize FlowSync, then brought back here.
+            You'll be redirected to Xero and brought straight back here — no
+            organisation selection needed just to sign in.
           </p>
         </div>
       </div>

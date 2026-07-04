@@ -15,19 +15,21 @@ export const Route = createFileRoute("/auth_/callback")({
 
 // Expected contract for the "xero-oauth-callback" edge function:
 //
-// Request body:  { code: string, redirectUri: string }
+// Request body: { code: string, redirectUri: string, mode: "login" | "connect" }
+// Header (mode = "connect" only): Authorization: Bearer <current supabase access_token>
 //
-// The function should:
-//   1. Exchange `code` for Xero tokens (access_token, refresh_token, id_token, expires_in)
-//      using the Xero client secret (server-side only).
-//   2. Upsert the refresh_token / access_token / expires_at into a table like
-//      `xero_connections`, keyed by the resolved user id.
-//   3. Create-or-sign-in the corresponding Supabase user (e.g. via the Xero id_token's
-//      email claim, using admin.createUser / generateLink, or signInWithIdToken).
-//   4. Return a Supabase session so the frontend can adopt it:
+//   mode = "login":
+//     Exchange code -> identity only -> create-or-sign-in the Supabase user ->
+//     return a new session for the frontend to adopt.
+//     Response: { session: { access_token, refresh_token } }
 //
-// Response body (success): { session: { access_token: string, refresh_token: string } }
-// Response body (error):   { error: string }
+//   mode = "connect":
+//     Exchange code -> org tokens -> identify the CALLER from the Authorization
+//     header (they're already signed in) -> upsert into xero_connections keyed
+//     to that user_id. No new session needed, frontend already has one.
+//     Response: { ok: true }
+//
+// Response body (either mode, on failure): { error: string }
 function AuthCallbackPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"working" | "error">("working");
@@ -38,16 +40,14 @@ function AuthCallbackPage() {
     if (hasRun.current) return;
     hasRun.current = true;
 
-    // Shared fallback: if Xero didn't hand us something we can exchange (explicit
-    // denial, connection-limit bounce, missing/stale state, etc.) but the user is
-    // already signed in from a previous successful auth, don't treat this as a
-    // failure — just send them back in. Only show a real error if they're not
-    // already authenticated.
+    // If Xero didn't give us something usable (explicit denial, tenant consent
+    // denied, stale/missing state, etc.) but the user is already signed in from
+    // a prior successful login, don't show an error — just send them back in.
     async function fallBackToExistingSession(reason: string) {
       console.warn("⚠️ No usable code/state — checking for existing session. Reason:", reason);
       const { data: existing } = await supabase.auth.getSession();
       if (existing.session) {
-        toast.error("Xero didn't complete that action, but you're still signed in.");
+        toast.error("That Xero action didn't complete, but you're still signed in.");
         navigate({ to: "/dashboard", replace: true });
         return true;
       }
@@ -55,24 +55,27 @@ function AuthCallbackPage() {
     }
 
     async function completeSignIn() {
-      console.log("🟢 STARTING SIGN-IN PROCESS");
+      const mode = (sessionStorage.getItem("xero_oauth_mode") as "login" | "connect") ?? "login";
+      console.log("🟢 STARTING CALLBACK. mode =", mode);
 
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const state = params.get("state");
       const errorParam = params.get("error");
+      const errorDescription = params.get("error_description");
+
+      sessionStorage.removeItem("xero_oauth_mode");
 
       if (errorParam) {
-        console.error("❌ Xero returned an explicit error parameter:", errorParam);
+        console.error("❌ Xero returned an error:", errorParam, errorDescription);
         const handled = await fallBackToExistingSession(`error=${errorParam}`);
         if (handled) return;
         setStatus("error");
-        setErrorMessage(`Xero denied the request: ${errorParam}`);
+        setErrorMessage(errorDescription || `Xero denied the request: ${errorParam}`);
         return;
       }
 
       const expectedState = sessionStorage.getItem("xero_oauth_state");
-      console.log("🔍 STATE CHECK:", { urlState: state, sessionStorageState: expectedState });
       sessionStorage.removeItem("xero_oauth_state");
 
       if (!code || !state || !expectedState || state !== expectedState) {
@@ -89,25 +92,51 @@ function AuthCallbackPage() {
         return;
       }
 
-      console.log("🚀 PASS: State validation succeeded. Invoking Supabase Edge Function...");
+      console.log("🚀 PASS: State validated. Invoking edge function...");
+
+      // For "connect" mode we need to prove who's calling, since the edge
+      // function isn't creating a session here — it's attaching org tokens
+      // to whoever is already signed in.
+      let authHeader: Record<string, string> | undefined;
+      if (mode === "connect") {
+        const { data: current } = await supabase.auth.getSession();
+        if (!current.session) {
+          setStatus("error");
+          setErrorMessage("You need to be signed in to connect an organisation.");
+          return;
+        }
+        authHeader = { Authorization: `Bearer ${current.session.access_token}` };
+      }
 
       const { data, error } = await supabase.functions.invoke("xero-oauth-callback", {
         body: {
           code,
           redirectUri: import.meta.env.VITE_XERO_REDIRECT_URI as string,
+          mode,
         },
+        headers: authHeader,
       });
 
-      if (error || !data?.session) {
-        console.error("❌ Supabase Edge Function error:", error || "No session returned in data");
-        const handled = await fallBackToExistingSession("edge function failed");
-        if (handled) return;
+      if (error) {
+        console.error("❌ Edge function error:", error);
         setStatus("error");
-        setErrorMessage(error?.message ?? "Could not complete Xero sign-in.");
+        setErrorMessage(error.message ?? "Could not complete the request.");
         return;
       }
 
-      console.log("🚀 PASS: Edge function returned a session. Setting Supabase session...");
+      if (mode === "connect") {
+        console.log("🎉 SUCCESS: Organisation connected.");
+        toast.success("Xero organisation connected.");
+        navigate({ to: "/dashboard", replace: true });
+        return;
+      }
+
+      // mode === "login"
+      if (!data?.session) {
+        setStatus("error");
+        setErrorMessage("Sign-in didn't return a session.");
+        return;
+      }
 
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
@@ -115,18 +144,18 @@ function AuthCallbackPage() {
       });
 
       if (sessionError) {
-        console.error("❌ supabase.auth.setSession failed:", sessionError.message);
+        console.error("❌ setSession failed:", sessionError.message);
         setStatus("error");
         setErrorMessage(sessionError.message);
         return;
       }
 
-      console.log("🎉 SUCCESS: Session established! Redirecting to dashboard...");
+      console.log("🎉 SUCCESS: Signed in.");
       navigate({ to: "/dashboard", replace: true });
     }
 
     completeSignIn().catch((err) => {
-      console.error("💥 CRITICAL FAIL: Uncaught exception in sign-in sequence:", err);
+      console.error("💥 Uncaught exception in callback:", err);
       setStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong.");
     });
@@ -136,10 +165,10 @@ function AuthCallbackPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
       <div className="text-center">
         {status === "working" ? (
-          <p className="text-sm text-muted-foreground">Finishing sign-in with Xero…</p>
+          <p className="text-sm text-muted-foreground">Finishing up with Xero…</p>
         ) : (
           <>
-            <p className="text-sm font-medium">Sign-in failed</p>
+            <p className="text-sm font-medium">Something went wrong</p>
             <p className="mt-1 text-sm text-muted-foreground">{errorMessage}</p>
             <a href="/auth" className="mt-4 inline-block text-sm underline">
               Try again
