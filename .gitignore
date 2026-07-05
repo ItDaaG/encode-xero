@@ -40,6 +40,8 @@ htmlcov/
 .nox/
 
 # ADK session storage
+.adk/
+session.db
 sessions.db
 *.db-journal
 

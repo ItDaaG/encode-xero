@@ -4,7 +4,7 @@ from shared.supabase_client import get_supabase_admin
 def get_users() -> dict:
     """Fetch all registered Supabase Auth users and print them for testing."""
     supabase = get_supabase_admin()
-    response = supabase.auth.admin.list_users(page=1, per_page=1000)
+    users_page = supabase.auth.admin.list_users(page=1, per_page=1000)
 
     users = [
         {
@@ -12,7 +12,7 @@ def get_users() -> dict:
             "email": user.email,
             "created_at": user.created_at,
         }
-        for user in response.users
+        for user in users_page
     ]
 
     print(f"\n--- Supabase users ({len(users)}) ---")
