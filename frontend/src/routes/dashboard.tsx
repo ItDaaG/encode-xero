@@ -133,6 +133,12 @@ function Dashboard() {
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-muted-foreground sm:inline">{email}</span>
             <Link
+              to="/legislation"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 font-medium hover:bg-accent"
+            >
+              Legislation Assistant
+            </Link>
+            <Link
               to="/auth/connect"
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 font-medium hover:bg-accent"
             >

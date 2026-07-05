@@ -25,8 +25,9 @@ const XERO_REDIRECT_URI = import.meta.env.VITE_XERO_REDIRECT_URI as string;
 // "accounting.reports.read" scopes in favour of granular per-resource ones
 // (apps created from March 2026 onward can't request the broad scopes at
 // all -- Xero's authorize endpoint rejects them with "invalid_scope").
-// This app only reads Invoices, Contacts, Organisation, and the P&L /
-// Balance Sheet reports, so it requests just those granular scopes:
+// This app reads Invoices, Contacts, Organisation, and the P&L / Balance
+// Sheet / Bank Summary reports, and writes demo bank transactions for
+// seeding test data, so it requests just those granular scopes:
 const CONNECT_SCOPES = [
   "openid",
   "profile",
@@ -37,6 +38,9 @@ const CONNECT_SCOPES = [
   "accounting.settings.read",
   "accounting.reports.profitandloss.read",
   "accounting.reports.balancesheet.read",
+  "accounting.reports.banksummary.read",
+  "accounting.banktransactions",
+  "accounting.contacts",
 ].join(" ");
 
 function buildXeroAuthorizeUrl() {
