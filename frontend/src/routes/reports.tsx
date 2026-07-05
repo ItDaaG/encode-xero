@@ -191,7 +191,7 @@ function ReportsPage() {
         </div>
       )}
 
-      {summary === null && !error && (
+      {!summary && !error && (
         <div className="mt-6 text-sm text-muted-foreground">Loading from Xero…</div>
       )}
 

@@ -17,7 +17,7 @@ export interface CurrencyTotal {
   total: number;
 }
 
-export type TaxJurisdiction = "GB" | "AE" | "DE";
+export type TaxJurisdiction = "GB" | "AE" | "DE" | "IN";
 
 export interface VatProximity {
   registered: boolean;
