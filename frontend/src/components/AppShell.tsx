@@ -5,6 +5,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CurrencySelector } from "@/components/CurrencySelector";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Sidebar,
   SidebarContent,
@@ -93,7 +94,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <SidebarFooter className="gap-3 p-4">
           <div className="truncate text-xs text-muted-foreground">{email}</div>
-          <CurrencySelector />
+          <div className="flex items-center gap-2">
+            <CurrencySelector />
+            <ThemeToggle />
+          </div>
           <button
             onClick={signOut}
             className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent"

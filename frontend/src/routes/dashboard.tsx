@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { xero, type CurrencyTotal, type EntityBreakdown, type XeroSummary } from "@/lib/xero";
 import { useCurrency, moneySizeClassForGroup } from "@/lib/currency";
 import { AppShell } from "@/components/AppShell";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 function formatMoney(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
@@ -43,7 +45,7 @@ function Dashboard() {
   function displayCurrencyTotals(totals: CurrencyTotal[], emptyHint: string): { value: string; hint: string } {
     if (totals.length === 0) return { value: formatMoney(0, displayCurrency), hint: emptyHint };
     const total = totals.reduce((sum, t) => sum + convert(t.total, t.currency), 0);
-    return { value: formatMoney(total, displayCurrency), hint: "Across all connected entities" };
+    return { value: formatMoney(total, displayCurrency), hint: "" };
   }
 
   useEffect(() => {
@@ -69,7 +71,6 @@ function Dashboard() {
   const lossMakingEntities = entities.filter((e) => e.netProfit < 0);
 
   const kpiTiles = [
-    { title: "Connected entities", value: String(entities.length), hint: entities.length ? "Xero organisations" : "No Xero organisations yet" },
     summaryError
       ? { title: "Consolidated Revenue", value: "—", hint: summaryError }
       : summary === null
@@ -97,10 +98,7 @@ function Dashboard() {
         : {
             title: "Estimated Tax Owed",
             ...displayCurrencyTotals(summary.consolidated.estimatedTaxOwed, "No profit to tax yet"),
-            hint:
-              summary.consolidated.estimatedTaxOwed.length > 0
-                ? "Rough estimate, not tax advice — see Legislation Assistant"
-                : "No profit to tax yet",
+            tooltip: "Rough estimate, not tax advice — see Legislation Assistant",
           },
   ];
 
@@ -143,17 +141,32 @@ function Dashboard() {
           </div>
         )}
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {kpiTiles.map((c) => (
-            <div key={c.title} className="min-w-0 rounded-xl border border-border bg-background p-5">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{c.title}</div>
-              <div className={`mt-2 truncate font-semibold ${kpiValueSizeClass}`}>
-                {c.value}
+        <TooltipProvider>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            {kpiTiles.map((c) => (
+              <div
+                key={c.title}
+                className="min-w-0 basis-full rounded-xl border border-border bg-background p-5 sm:basis-[calc(50%-0.5rem)] lg:basis-[calc(33.333%-0.667rem)]"
+              >
+                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {c.title}
+                  {"tooltip" in c && c.tooltip && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-56 normal-case">{c.tooltip}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                <div className={`mt-2 truncate font-semibold ${kpiValueSizeClass}`}>
+                  {c.value}
+                </div>
+                {c.hint && <div className="mt-1 text-xs text-muted-foreground">{c.hint}</div>}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">{c.hint}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </TooltipProvider>
 
         {summary && entities.length > 0 && (
           <>
