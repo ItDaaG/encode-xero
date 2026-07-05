@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { extractFunctionErrorMessage } from "@/lib/xero";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth_/callback")({
@@ -118,9 +119,10 @@ function AuthCallbackPage() {
       });
 
       if (error) {
-        console.error("❌ Edge function error:", error);
+        const message = await extractFunctionErrorMessage(error);
+        console.error("❌ Edge function error:", message);
         setStatus("error");
-        setErrorMessage(error.message ?? "Could not complete the request.");
+        setErrorMessage(message);
         return;
       }
 
