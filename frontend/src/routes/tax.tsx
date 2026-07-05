@@ -94,7 +94,7 @@ function TaxPage() {
         </div>
       )}
 
-      {summary === null && !error && (
+      {!summary && !error && (
         <div className="mt-6 text-sm text-muted-foreground">Loading from Xero…</div>
       )}
 
@@ -219,4 +219,5 @@ const JURISDICTION_NAMES: Record<EntityBreakdown["taxJurisdiction"], string> = {
   GB: "United Kingdom",
   AE: "United Arab Emirates",
   DE: "Germany",
+  IN: "India",
 };

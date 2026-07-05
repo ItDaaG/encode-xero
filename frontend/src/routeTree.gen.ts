@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TaxRouteImport } from './routes/tax'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as LegislationRouteImport } from './routes/legislation'
+import { Route as FxTrendsRouteImport } from './routes/fx-trends'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -31,6 +32,11 @@ const ReportsRoute = ReportsRouteImport.update({
 const LegislationRoute = LegislationRouteImport.update({
   id: '/legislation',
   path: '/legislation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FxTrendsRoute = FxTrendsRouteImport.update({
+  id: '/fx-trends',
+  path: '/fx-trends',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/fx-trends': typeof FxTrendsRoute
   '/legislation': typeof LegislationRoute
   '/reports': typeof ReportsRoute
   '/tax': typeof TaxRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/fx-trends': typeof FxTrendsRoute
   '/legislation': typeof LegislationRoute
   '/reports': typeof ReportsRoute
   '/tax': typeof TaxRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
+  '/fx-trends': typeof FxTrendsRoute
   '/legislation': typeof LegislationRoute
   '/reports': typeof ReportsRoute
   '/tax': typeof TaxRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/fx-trends'
     | '/legislation'
     | '/reports'
     | '/tax'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/fx-trends'
     | '/legislation'
     | '/reports'
     | '/tax'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/fx-trends'
     | '/legislation'
     | '/reports'
     | '/tax'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
+  FxTrendsRoute: typeof FxTrendsRoute
   LegislationRoute: typeof LegislationRoute
   ReportsRoute: typeof ReportsRoute
   TaxRoute: typeof TaxRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/legislation'
       fullPath: '/legislation'
       preLoaderRoute: typeof LegislationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fx-trends': {
+      id: '/fx-trends'
+      path: '/fx-trends'
+      fullPath: '/fx-trends'
+      preLoaderRoute: typeof FxTrendsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
+  FxTrendsRoute: FxTrendsRoute,
   LegislationRoute: LegislationRoute,
   ReportsRoute: ReportsRoute,
   TaxRoute: TaxRoute,

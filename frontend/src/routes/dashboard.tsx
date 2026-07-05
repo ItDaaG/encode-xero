@@ -14,6 +14,14 @@ function formatPercent(value: number | null): string {
   return value === null ? "N/A" : `${(value * 100).toFixed(1)}%`;
 }
 
+// Hardcoded for now rather than trusting the live-fetched currency field in
+// the table's display column -- everything is GBP except India (INR).
+// Doesn't affect the actual conversion math elsewhere, which still uses the
+// real e.currency.
+function displayCurrencyLabel(tenantName: string): string {
+  return tenantName.toLowerCase().includes("india") ? "INR" : "GBP";
+}
+
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -73,27 +81,27 @@ function Dashboard() {
   const kpiTiles = [
     summaryError
       ? { title: "Consolidated Revenue", value: "—", hint: summaryError }
-      : summary === null
+      : !summary
         ? { title: "Consolidated Revenue", value: "…", hint: "Loading from Xero…" }
         : { title: "Consolidated Revenue", ...displayCurrencyTotals(summary.consolidated.revenue, "No revenue yet") },
     summaryError
       ? { title: "Consolidated Net Profit", value: "—", hint: summaryError }
-      : summary === null
+      : !summary
         ? { title: "Consolidated Net Profit", value: "…", hint: "Loading from Xero…" }
         : { title: "Consolidated Net Profit", ...displayCurrencyTotals(summary.consolidated.netProfit, "No profit data yet") },
     summaryError
       ? { title: "Consolidated Expenses", value: "—", hint: summaryError }
-      : summary === null
+      : !summary
         ? { title: "Consolidated Expenses", value: "…", hint: "Loading from Xero…" }
         : { title: "Consolidated Expenses", ...displayCurrencyTotals(summary.consolidated.expenses, "No expense data yet") },
     summaryError
       ? { title: "Total Cash Position", value: "—", hint: summaryError }
-      : summary === null
+      : !summary
         ? { title: "Total Cash Position", value: "…", hint: "Loading from Xero…" }
         : { title: "Total Cash Position", ...displayCurrencyTotals(summary.consolidated.cash, "No bank accounts found") },
     summaryError
       ? { title: "Estimated Tax Owed", value: "—", hint: summaryError }
-      : summary === null
+      : !summary
         ? { title: "Estimated Tax Owed", value: "…", hint: "Loading from Xero…" }
         : {
             title: "Estimated Tax Owed",
@@ -222,7 +230,7 @@ function Dashboard() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2 pr-4 text-muted-foreground">{e.currency}</td>
+                          <td className="py-2 pr-4 text-muted-foreground">{displayCurrencyLabel(e.tenantName)}</td>
                           <td className="py-2 pr-4">{displayMoney(e.revenue, e.currency)}</td>
                           <td className={`py-2 pr-4 ${isLoss ? "font-medium text-destructive" : ""}`}>
                             {displayMoney(e.netProfit, e.currency)}
