@@ -17,6 +17,17 @@ export interface CurrencyTotal {
   total: number;
 }
 
+export type TaxJurisdiction = "GB" | "AE" | "DE";
+
+export interface VatProximity {
+  registered: boolean;
+  salesTaxBasis: string;
+  thresholdGbp: number;
+  annualisedRevenue: number;
+  proximityPercent: number;
+  status: "registered" | "well_under" | "approaching" | "over";
+}
+
 export interface EntityBreakdown {
   tenantId: string;
   tenantName: string;
@@ -28,16 +39,32 @@ export interface EntityBreakdown {
   grossMargin: number | null;
   netMargin: number | null;
   cash: number | null;
+  taxJurisdiction: TaxJurisdiction;
+  estimatedTaxOwed: number;
+  taxBandLabel: string;
+  vat: VatProximity;
+}
+
+export interface CountrySubtotal {
+  jurisdiction: TaxJurisdiction;
+  jurisdictionLabel: string;
+  currency: string;
+  entityCount: number;
+  totalRevenue: number;
+  totalNetProfit: number;
+  totalEstimatedTaxOwed: number;
 }
 
 export interface XeroSummary {
   entities: EntityBreakdown[];
+  byCountry: CountrySubtotal[];
   warnings?: string[];
   consolidated: {
     revenue: CurrencyTotal[];
     expenses: CurrencyTotal[];
     netProfit: CurrencyTotal[];
     cash: CurrencyTotal[];
+    estimatedTaxOwed: CurrencyTotal[];
   };
 }
 

@@ -1,9 +1,9 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { supabase } from "@/integrations/supabase/client";
 import { sendLegislationChatMessage } from "@/lib/legislationChat";
-import { Layers, Send } from "lucide-react";
+import { AppShell } from "@/components/AppShell";
+import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/legislation")({
   head: () => ({
@@ -13,7 +13,14 @@ export const Route = createFileRoute("/legislation")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: LegislationChatPage,
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    ...(typeof search.q === "string" ? { q: search.q } : {}),
+  }),
+  component: () => (
+    <AppShell>
+      <LegislationChatPage />
+    </AppShell>
+  ),
 });
 
 interface ChatMessage {
@@ -49,24 +56,24 @@ const SUGGESTIONS = [
 ];
 
 function LegislationChatPage() {
-  const navigate = useNavigate();
-  const [ready, setReady] = useState(false);
+  const { q } = Route.useSearch();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sessionIdRef = useRef(crypto.randomUUID());
   const bottomRef = useRef<HTMLDivElement>(null);
+  const autoSentRef = useRef(false);
 
+  // Pre-filled question from a link (e.g. "Ask about this branch" on the
+  // Tax page) -- send it once on mount, not on every re-render.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        navigate({ to: "/auth", replace: true });
-        return;
-      }
-      setReady(true);
-    });
-  }, [navigate]);
+    if (q && !autoSentRef.current) {
+      autoSentRef.current = true;
+      handleSend(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -93,119 +100,92 @@ function LegislationChatPage() {
     }
   }
 
-  if (!ready) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">
-        Loading…
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="border-b border-border bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <Layers className="h-4 w-4" />
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
+      <div className="mb-6">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Legislation Assistant
+        </div>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Ask about tax legislation</h1>
+        <p className="mt-2 max-w-2xl text-muted-foreground">
+          Grounded in live search across UK, UAE, and German tax authorities, combined with your
+          actual connected Xero figures. Not a substitute for professional tax advice.
+        </p>
+      </div>
+
+      <div className="flex flex-1 flex-col rounded-2xl border border-border bg-card">
+        <div className="flex-1 space-y-4 overflow-y-auto p-6" style={{ minHeight: "20rem", maxHeight: "60vh" }}>
+          {messages.length === 0 && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Try asking:</p>
+              <div className="flex flex-wrap gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleSend(s)}
+                    className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            <span className="text-lg font-semibold tracking-tight">FlowSync</span>
-          </Link>
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent"
-          >
-            Back to dashboard
-          </Link>
-        </div>
-      </header>
+          )}
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
-        <div className="mb-6">
-          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Legislation Assistant
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Ask about tax legislation</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Grounded in live search across UK, UAE, and German tax authorities, combined with your
-            actual connected Xero figures. Not a substitute for professional tax advice.
-          </p>
-        </div>
-
-        <div className="flex flex-1 flex-col rounded-2xl border border-border bg-card">
-          <div className="flex-1 space-y-4 overflow-y-auto p-6" style={{ minHeight: "20rem", maxHeight: "60vh" }}>
-            {messages.length === 0 && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Try asking:</p>
-                <div className="flex flex-wrap gap-2">
-                  {SUGGESTIONS.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => handleSend(s)}
-                      className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
-                    >
-                      {s}
-                    </button>
-                  ))}
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              {m.role === "user" ? (
+                <div className="max-w-[85%] whitespace-pre-wrap rounded-xl bg-primary px-4 py-3 text-sm text-primary-foreground">
+                  {m.text}
                 </div>
-              </div>
-            )}
-
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                {m.role === "user" ? (
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-xl bg-primary px-4 py-3 text-sm text-primary-foreground">
-                    {m.text}
-                  </div>
-                ) : (
-                  <div className="max-w-[85%] rounded-xl border border-border bg-background px-4 py-3 text-sm">
-                    <ReactMarkdown components={markdownComponents}>{m.text}</ReactMarkdown>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {sending && (
-              <div className="flex justify-start">
-                <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-                  Thinking…
+              ) : (
+                <div className="max-w-[85%] rounded-xl border border-border bg-background px-4 py-3 text-sm">
+                  <ReactMarkdown components={markdownComponents}>{m.text}</ReactMarkdown>
                 </div>
+              )}
+            </div>
+          ))}
+
+          {sending && (
+            <div className="flex justify-start">
+              <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+                Thinking…
               </div>
-            )}
+            </div>
+          )}
 
-            {error && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+          {error && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
-            <div ref={bottomRef} />
-          </div>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend(input);
-            }}
-            className="flex items-center gap-2 border-t border-border p-4"
-          >
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about tax or business legislation…"
-              disabled={sending}
-              className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={sending || !input.trim()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-            >
-              <Send className="h-4 w-4" /> Send
-            </button>
-          </form>
+          <div ref={bottomRef} />
         </div>
-      </main>
-    </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend(input);
+          }}
+          className="flex items-center gap-2 border-t border-border p-4"
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about tax or business legislation…"
+            disabled={sending}
+            className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+          />
+          <button
+            type="submit"
+            disabled={sending || !input.trim()}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          >
+            <Send className="h-4 w-4" /> Send
+          </button>
+        </form>
+      </div>
+    </main>
   );
 }
